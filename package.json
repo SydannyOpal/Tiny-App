@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/SydannyOpal/Tiny-App/issues"
   },
-  "homepage": "https://github.com/SydannyOpal/Tiny-App#readme"
+  "homepage": "https://github.com/SydannyOpal/Tiny-App#readme",
+  "dependencies": {
+    "express": "^4.18.1"
+  }
 }
