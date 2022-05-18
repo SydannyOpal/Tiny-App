@@ -9,6 +9,19 @@
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
+      <div class="form-inline ml-auto">
+        <% if(!locals.user){ %>
+          <form class="navbar-nav mr-2" method="post" action="/login">
+              <input type="text" class="form-control " id="username" name="username" />
+              <button class="btn btn-primary ">Log in</button>
+          </form>
+          <% } else { %>
+        <label class="mr-2"> logged in as: <%= locals.user.email %> </label>    
+                <form class="navbar-nav" method="post" action="/logout">
+                    <button class="btn btn-primary ">Log out</button>   
+                </form>
+                <% } %>   
+      </div>
     </div>
   </nav>
 </header>
