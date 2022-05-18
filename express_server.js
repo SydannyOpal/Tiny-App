@@ -82,6 +82,20 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
+app.get("/register", (req, res) => {
+  const templateVars = {
+    urls: urlDatabase,
+    name: req.cookies.email,
+  };
+  res.render("urls_register", templateVars);
+});
+
+app.post("/register", (req, res) => {
+  let email = req.body.email;
+  res.cookie("email", email);
+  res.redirect("/urls");
+});
+
 app.post("/login", (req, res) => {
   let username = req.body.username;
   res.cookie("username", username);
