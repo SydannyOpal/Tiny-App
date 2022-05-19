@@ -40,6 +40,16 @@ const users = {
   }
 };
 
+const urlsForUser = (id) => {
+  let result = {};
+  for (key in urlDatabase) {
+    if (urlDatabase[key].userID === id){
+      result[key] = urlDatabase[key];
+    }
+  }
+  return result;
+}
+
 const findUserEmail = (users, email) => {
   for (user in users) {
     if (users[user].email === email) {
@@ -67,7 +77,7 @@ app.get("/urls", (req, res) => {
   const user = users[userId]
   if (user) {
     const templateVars = {
-      urls: urlDatabase,
+      urls: filteredUrls,
       user,
     };
     res.render("urls_index", templateVars);
