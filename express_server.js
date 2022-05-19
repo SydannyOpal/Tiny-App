@@ -27,7 +27,16 @@ const users = {
     email: "user2@example.com", 
     password: "dishwasher-funk"
   }
-}
+};
+
+const findUserEmail = (users, email) => {
+  for (user in users) {
+    if (users[user].email === email) {
+      return users[user];
+    }
+  }
+};
+
 
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
@@ -110,13 +119,19 @@ app.get("/register", (req, res) => {
   const templateVars = {
     urls: urlDatabase, user,
   };
-    name: req.cookies.email,
-  res.render("urls_register", templateVars);
+    name: req.cookies.email,res.render("urls_register", templateVars);
 });
 
 app.post("/register", (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
+  if (email === "" || password === "") {
+    res.send({ statusCode: 400, message: "Please enter UserId or Password" });
+  }
+  const checkEmail = findUserEmail(users, email);
+  if (checkEmail) {
+    return res.send({ statusCode: 400, message: "Email already exist" });
+  }
   const id = generateRandomString();
   res.cookie("id", id);
   users[id] = {
@@ -127,14 +142,37 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
+app.get("/login", (req, res) => {
+  res.render("urls_login");
+});
+
+
 app.post("/login", (req, res) => {
-  let username = req.body.username;
-  res.cookie("username", username);
-  res.redirect("/urls");
+  let email = req.body.email;
+  let password = req.body.password;
+  let userId = findUserEmail(users, email);
+  console.log(userId, email, password);
+  if (email === "" || password === "") {
+    res.send({ statusCode: 403, message: "Please enter UserId or Password" });
+  }
+  const checkEmail = findUserEmail(users, email);
+  if (!checkEmail) {
+    return res.send({ statusCode: 403, message: "E-mail cannot be found" });
+  } else if (findUserEmail(users, email)) {
+  const id = generateRandomString();
+  res.cookie("id", id);
+  users[id] = {
+    id,
+    email,
+    password,
+  };  res.redirect("/urls");
+} else {
+  res.status(403).send("Please register first");
+}
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("id");
   res.redirect("/urls");
 });
 
