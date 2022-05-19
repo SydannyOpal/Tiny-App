@@ -62,13 +62,19 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
   const userId = req.cookies.id;
   const user = users[userId]
-  const templateVars = { urls: urlDatabase, user,};
-  res.render("urls_index", templateVars);
-});
+  if (user) {
+    const templateVars = {
+      urls: urlDatabase,
+      user,
+    };
+    res.render("urls_index", templateVars);
+  } else {
+    res.redirect("/login");
+  }});
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL] = {longURL: req.body.longURL,  userID: req.cookies.id};
   res.redirect(`/urls/ ${shortURL}`);
 });
 
@@ -86,8 +92,12 @@ app.post("/urls/:id", (req, res) => {
 
 app.get("/u/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
+  if (urlDatabase[shortURL]) {
   const longURL = urlDatabase[shortURL];
   res.redirect(longURL);
+  } else {
+  res.send({ statusCode: 400, message: "ShortURL does not exist" });
+  }
 });
 
 app.get("/urls/:shortURL", (req, res) => {
@@ -100,11 +110,14 @@ app.get("/urls/:shortURL", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const userId = req.cookies.id;
   const user = users[userId]
+  if (user) {
   const templateVars = {
-    urls: urlDatabase,
     user,
   };
   res.render("urls_new", templateVars);
+  } else {
+  res.redirect("/login");
+  }
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
