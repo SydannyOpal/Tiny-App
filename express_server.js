@@ -1,6 +1,11 @@
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
+const { redirect } = require("express/lib/response");
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({extended: true}));
 
 function generateRandomString() {
   let string = "";
@@ -12,8 +17,14 @@ function generateRandomString() {
 };
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+        longURL: "https://www.tsn.ca",
+        userID: "aJ48lW"
+    },
+    i3BoGr: {
+        longURL: "https://www.google.ca",
+        userID: "aJ48lW"
+    }
 };
 
 const users = { 
@@ -36,14 +47,6 @@ const findUserEmail = (users, email) => {
     }
   }
 };
-
-
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({extended: true}));
-
-
 
 app.set("view engine", "ejs");
 
@@ -129,10 +132,14 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 app.get("/register", (req, res) => {
   const userId = req.cookies.id;
   const user = users[userId];
-  const templateVars = {
-    urls: urlDatabase, user,
-  };
-    name: req.cookies.email,res.render("urls_register", templateVars);
+  if (user) {
+    res.redirect("/urls");
+  } else {
+    const templateVars = {
+      user,
+    };
+    res.render("urls_register", templateVars);
+  }
 });
 
 app.post("/register", (req, res) => {
@@ -156,8 +163,13 @@ app.post("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  res.render("urls_login");
-});
+  const userId = req.cookies.id;
+  const user = users[userId];
+  if (user) {
+    res.redirect("/urls");
+  } else {
+    res.render("urls_login");
+  }});
 
 
 app.post("/login", (req, res) => {
