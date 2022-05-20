@@ -1,10 +1,9 @@
+const {findUserEmail, generateRandomString, urlsForUser} = require("./helpers")
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 const { redirect } = require("express/lib/response");
 const bcrypt = require("bcryptjs");
-const password = "purple-monkey-dinosaur"; // found in the req.params object
-const hashedPassword = bcrypt.hashSync(password, 10);
 const cookieSession = require('cookie-session')
 app.use(cookieSession({
   name: 'session',
@@ -13,14 +12,6 @@ app.use(cookieSession({
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
-function generateRandomString() {
-  let string = "";
-  let char = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 6; i++){
-    string += char.charAt(Math.random() * char.length)
-  }
-  return string
-};
 
 const urlDatabase = {
   b6UTxQ: {
@@ -45,16 +36,6 @@ const users = {
     password: "dishwasher-funk"
   }
 };
-
-const urlsForUser = (id) => {
-  let result = {};
-  for (key in urlDatabase) {
-    if (urlDatabase[key].userID === id){
-      result[key] = urlDatabase[key];
-    }
-  }
-  return result;
-}
 
 const findUserEmail = (users, email) => {
   for (user in users) {
@@ -82,6 +63,7 @@ app.get("/urls", (req, res) => {
   const userId = req.session.userID;
   const user = users[userId]
   if (user) {
+    const filteredUrls = urlsForUser(userId, urlDatabase);
     const templateVars = {
       urls: filteredUrls,
       user,
