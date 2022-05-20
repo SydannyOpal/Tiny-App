@@ -2,6 +2,9 @@ const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 const { redirect } = require("express/lib/response");
+const bcrypt = require("bcryptjs");
+const password = "purple-monkey-dinosaur"; // found in the req.params object
+const hashedPassword = bcrypt.hashSync(password, 10);
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 const bodyParser = require("body-parser");
@@ -153,8 +156,9 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-  let email = req.body.email;
-  let password = req.body.password;
+  const email = req.body.email;
+  const password = req.body.password;
+  let hashedPassword = bcrypt.hashSync(password, 10);
   if (email === "" || password === "") {
     res.send({ statusCode: 400, message: "Please enter UserId or Password" });
   }
@@ -167,7 +171,7 @@ app.post("/register", (req, res) => {
   users[id] = {
     id,
     email,
-    password,
+    hashedPassword,
   };
   res.redirect("/urls");
 });
@@ -185,12 +189,16 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
+  let hashedPassword = bcrypt.hashSync(password, 10);
   let userId = findUserEmail(users, email);
   console.log(userId, email, password);
   if (email === "" || password === "") {
     res.send({ statusCode: 403, message: "Please enter UserId or Password" });
   }
   const checkEmail = findUserEmail(users, email);
+  if (!bcrypt.compareSync(password, checkEmail.hashedPassword)) {
+    res.send({ statusCode: 403, message: "Invalid UserId or Password" });
+  }
   if (!checkEmail) {
     return res.send({ statusCode: 403, message: "E-mail cannot be found" });
   } else if (findUserEmail(users, email)) {
@@ -200,7 +208,9 @@ app.post("/login", (req, res) => {
     id,
     email,
     password,
-  };  res.redirect("/urls");
+  }; 
+  console.log("checkEmail==", checkEmail.hashedPassword); 
+  res.redirect("/urls");
 } else {
   res.status(403).send("Please register first");
 }
