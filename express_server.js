@@ -5,8 +5,11 @@ const { redirect } = require("express/lib/response");
 const bcrypt = require("bcryptjs");
 const password = "purple-monkey-dinosaur"; // found in the req.params object
 const hashedPassword = bcrypt.hashSync(password, 10);
-const cookieParser = require("cookie-parser");
-app.use(cookieParser());
+const cookieSession = require('cookie-session')
+app.use(cookieSession({
+  name: 'session',
+  keys: ["key1", "key"],
+}))
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -76,7 +79,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const userId = req.cookies.id;
+  const userId = req.session.userID;
   const user = users[userId]
   if (user) {
     const templateVars = {
@@ -117,15 +120,15 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const userId = req.cookies.id;
+  const userId = req.session.userID;
   const user = users[userId]
   const templateVars = { user, shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL],};
   res.render("urls_show", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const userId = req.cookies.id;
-  const user = users[userId]
+  const userId = req.session.userID;
+    const user = users[userId]
   if (user) {
   const templateVars = {
     user,
@@ -143,7 +146,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  const userId = req.cookies.id;
+  const userId = req.session.userID;
   const user = users[userId];
   if (user) {
     res.redirect("/urls");
@@ -167,8 +170,8 @@ app.post("/register", (req, res) => {
     return res.send({ statusCode: 400, message: "Email already exist" });
   }
   const id = generateRandomString();
-  res.cookie("id", id);
-  users[id] = {
+  req.session.userID = id;
+    users[id] = {
     id,
     email,
     hashedPassword,
@@ -177,7 +180,7 @@ app.post("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const userId = req.cookies.id;
+  const userId = req.session.userID;
   const user = users[userId];
   if (user) {
     res.redirect("/urls");
@@ -189,7 +192,7 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
-  let hashedPassword = bcrypt.hashSync(password, 10);
+  let hashedPassword = password;
   let userId = findUserEmail(users, email);
   console.log(userId, email, password);
   if (email === "" || password === "") {
@@ -214,11 +217,16 @@ app.post("/login", (req, res) => {
 } else {
   res.status(403).send("Please register first");
 }
+if (!bcrypt.compareSync(hashedPassword, checkEmail.password)) {
+  res.send({ statusCode: 403, message: "Invalid UserId or Password" });
+}
+  req.session.userID = checkEmail.id
+  res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("id");
-  res.redirect("/urls");
+  req.session = null;
+    res.redirect("/urls");
 });
 
 app.listen(PORT, () => {
