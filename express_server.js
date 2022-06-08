@@ -1,59 +1,32 @@
+const app = express();
+const PORT = 8080; // default port 8080
+
+const express = require("express");
+const { redirect } = require("express/lib/response");
+const bcrypt = require("bcryptjs");
+const cookieSession = require("cookie-session");
+const bodyParser = require("body-parser");
+const urlDatabase = require("./in-memory-db/URL-db");
+const users = require("./lib/in-memory-db/");
 const {
   findUserEmail,
   generateRandomString,
   urlsForUser,
-} = require("./helpers");
-const express = require("express");
-const app = express();
-const PORT = 8080; // default port 8080
-const { redirect } = require("express/lib/response");
-const bcrypt = require("bcryptjs");
-const cookieSession = require("cookie-session");
+} = require("./lib/helpers");
+
 app.use(
   cookieSession({
     name: "session",
     keys: ["key1", "key"],
   })
 );
-const bodyParser = require("body-parser");
+
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW",
-  },
-};
-
-const users = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
-  },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk",
-  },
-};
 
 app.set("view engine", "ejs");
 
 app.get("/", (req, res) => {
   res.send("Hello!");
-});
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 app.get("/urls", (req, res) => {
@@ -71,10 +44,31 @@ app.get("/urls", (req, res) => {
   }
 });
 
+app.get("/urls.json", (req, res) => {
+  res.json(urlDatabase);
+});
+
+app.get("/hello", (req, res) => {
+  res.send("<html><body>Hello <b>World</b></body></html>\n");
+});
+
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   urlDatabase[shortURL] = { longURL: req.body.longURL, userID: req.cookies.id };
   res.redirect(`/urls/ ${shortURL}`);
+});
+
+app.get("/urls/new", (req, res) => {
+  const userId = req.session.userID;
+  const user = users[userId];
+  if (user) {
+    const templateVars = {
+      user,
+    };
+    res.render("urls_new", templateVars);
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.get("/urls/:id", (req, res) => {
@@ -108,19 +102,6 @@ app.get("/urls/:shortURL", (req, res) => {
     longURL: urlDatabase[req.params.shortURL],
   };
   res.render("urls_show", templateVars);
-});
-
-app.get("/urls/new", (req, res) => {
-  const userId = req.session.userID;
-  const user = users[userId];
-  if (user) {
-    const templateVars = {
-      user,
-    };
-    res.render("urls_new", templateVars);
-  } else {
-    res.redirect("/login");
-  }
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -178,7 +159,7 @@ app.post("/login", (req, res) => {
   let password = req.body.password;
   let hashedPassword = password;
   let userId = findUserEmail(users, email);
-  console.log(userId, email, password);
+
   if (email === "" || password === "") {
     res.send({ statusCode: 403, message: "Please enter UserId or Password" });
   }
@@ -196,7 +177,6 @@ app.post("/login", (req, res) => {
       email,
       password,
     };
-    console.log("checkEmail==", checkEmail.hashedPassword);
     res.redirect("/urls");
   } else {
     res.status(403).send("Please register first");
