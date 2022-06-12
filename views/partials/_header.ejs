@@ -12,7 +12,7 @@
       <div class="form-inline ml-auto">
         <% if(!locals.user){ %>
           <a class="nav-item nav-link" href="/login">Login</a>
-          <a class="nav-item nav-link" href="/register">Register Here</a>
+          <a class="nav-item nav-link" href="/register">Register</a>
         <% } else { %>
         <label class="mr-2"> logged in as: <%= locals.user.email %> </label>    
                 <form class="navbar-nav" method="post" action="/logout">

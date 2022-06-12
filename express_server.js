@@ -1,13 +1,13 @@
-const app = express();
-const PORT = 8080; // default port 8080
-
 const express = require("express");
+const PORT = 8080; // default port 8080
+const app = express();
+
 const { redirect } = require("express/lib/response");
 const bcrypt = require("bcryptjs");
 const cookieSession = require("cookie-session");
 const bodyParser = require("body-parser");
-const urlDatabase = require("./in-memory-db/URL-db");
-const users = require("./lib/in-memory-db/");
+const urlDatabase = require("./lib/in-memory-db/URL-db");
+const users = require("./lib/in-memory-db/Users");
 const {
   findUserEmail,
   generateRandomString,
@@ -21,9 +21,8 @@ app.use(
   })
 );
 
-app.use(bodyParser.urlencoded({ extended: true }));
-
 app.set("view engine", "ejs");
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -32,7 +31,9 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   const userId = req.session.userID;
   const user = users[userId];
+  // console.log("from get /urls", user);
   if (user) {
+    console.log("from get urls", urlDatabase);
     const filteredUrls = urlsForUser(userId, urlDatabase);
     const templateVars = {
       urls: filteredUrls,
@@ -54,8 +55,11 @@ app.get("/hello", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: req.cookies.id };
-  res.redirect(`/urls/ ${shortURL}`);
+  urlDatabase[shortURL] = {
+    longURL: req.body.longURL,
+    userID: req.session.userID,
+  };
+  res.redirect(`/urls/${shortURL}`);
 });
 
 app.get("/urls/new", (req, res) => {
@@ -73,13 +77,18 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:id", (req, res) => {
   const shortURL = req.params.id;
-  urlDatabase[shortURL] = req.body.longURL;
-  res.redirect(`/urls/${shortURL}`);
+  // urlDatabase[shortURL] = req.body.longURL;
+  const templateVars = {
+    user: users[urlDatabase[shortURL].userID],
+    longURL: { longURL: urlDatabase[shortURL].longURL },
+    shortURL,
+  };
+  res.render(`urls_show`, templateVars);
 });
 
 app.post("/urls/:id", (req, res) => {
   const shortURL = req.params.id;
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL].longURL = req.body.longURL;
   res.redirect("/urls");
 });
 
@@ -126,6 +135,7 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
+  // console.log(users);
   let hashedPassword = bcrypt.hashSync(password, 10);
   if (email === "" || password === "") {
     res.send({ statusCode: 400, message: "Please enter UserId or Password" });
@@ -137,9 +147,9 @@ app.post("/register", (req, res) => {
   const id = generateRandomString();
   req.session.userID = id;
   users[id] = {
-    id,
-    email,
-    hashedPassword,
+    id: id,
+    email: email,
+    password: hashedPassword,
   };
   res.redirect("/urls");
 });
@@ -157,35 +167,23 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
-  let hashedPassword = password;
-  let userId = findUserEmail(users, email);
-
+  const user = findUserEmail(users, email);
+  console.log("inside login:" + users);
+  console.log("userid is:" + user.id);
   if (email === "" || password === "") {
-    res.send({ statusCode: 403, message: "Please enter UserId or Password" });
+    return res.send({
+      statusCode: 403,
+      message: "Please enter email or Password",
+    });
   }
-  const checkEmail = findUserEmail(users, email);
-  if (!bcrypt.compareSync(password, checkEmail.hashedPassword)) {
-    res.send({ statusCode: 403, message: "Invalid UserId or Password" });
-  }
-  if (!checkEmail) {
+  if (!user) {
     return res.send({ statusCode: 403, message: "E-mail cannot be found" });
-  } else if (findUserEmail(users, email)) {
-    const id = generateRandomString();
-    res.cookie("id", id);
-    users[id] = {
-      id,
-      email,
-      password,
-    };
-    res.redirect("/urls");
-  } else {
-    res.status(403).send("Please register first");
   }
-  if (!bcrypt.compareSync(hashedPassword, checkEmail.password)) {
-    res.send({ statusCode: 403, message: "Invalid UserId or Password" });
+  if (!bcrypt.compareSync(password, user.password)) {
+    return res.send({ statusCode: 403, message: "Invalid UserId or Password" });
   }
-  req.session.userID = checkEmail.id;
-  res.redirect("/urls");
+  req.session.userID = user.id;
+  return res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
