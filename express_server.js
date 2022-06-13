@@ -25,15 +25,9 @@ app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
-});
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
+  res.redirect("/login")
 });
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 //Landing page for all users/ Dashboard for  for short urls
 app.get("/urls", (req, res) => {
   const userId = req.session.userID;
@@ -78,15 +72,16 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
- const hashedPassword = bcrypt.hashSync(password, 10);
   if (email === "" || password === "") {
-    res.send({ statusCode: 400, message: "Please enter UserId or Password" });
+    return res.status(400).send("<h6> email or password cannot be empty </h6> <p> <a href='/register'>register</a></p>")
   }
   const checkEmail = findUserEmail(users, email);
   if (checkEmail) {
-    return res.send({ statusCode: 400, message: "Email already exist" });
+    // return res.send({ statusCode: 400, message: "Email already exist" });
+    return res.status(400).send("<h6> Email already exist </h6> <p> <a href='/register'>register</a> | <a href='/login'>login</a> </p>")
   }
   const id = generateRandomString();
+  const hashedPassword = bcrypt.hashSync(password, 10);
   req.session.userID = id;
   users[id] = {
     id: id,
@@ -137,11 +132,16 @@ app.get("/urls/new", (req, res) => {
     };
     res.render("urls_new", templateVars);
   } else {
-    res.redirect("/login");
-  }
+    if (user == null) {
+      res.redirect("/login")
+    }  }
 });
 //storing/ sorting urls associated with a particular user
 app.get("/urls/:id", (req, res) => {
+  const user = req.session.userID;
+  if (user == null) {
+    res.redirect("/login")
+  }
   const shortURL = req.params.id;
   // urlDatabase[shortURL] = req.body.longURL;
   const templateVars = {
@@ -186,7 +186,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  req.session = null;
+  req.session.userID = null;
   res.redirect("/urls");
 });
 
